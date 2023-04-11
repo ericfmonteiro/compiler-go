@@ -83,7 +83,7 @@ func main() {
 	}
 
 	if token == T_ERRO_LEX {
-		fmt.Println("Erro léxico")
+		fmt.Println(mensagemDeErro)
 	} else {
 		fmt.Println("Sem erro léxico!")
 	}
@@ -227,7 +227,7 @@ func searchNextToken() error {
 		token = T_FIM_FONTE
 	} else {
 		token = T_ERRO_LEX // EXAMPLE OF LEXICAL ERROR: &
-		mensagemDeErro = "Erro Léxico na linha: " + string(linhaAtual) + "\nReconhecido ao atingir a coluna: " + string(colunaAtual) + "\nLinha do Erro: <" + string(linhaFonte) + ">\nToken desconhecido: " + string(lookAhead)
+		mensagemDeErro = "Erro Léxico na linha: " + fmt.Sprint(linhaAtual) + "\nReconhecido ao atingir a coluna: " + fmt.Sprint(colunaAtual) + "\nLinha do Erro: <" + string(linhaFonte) + ">\nToken desconhecido: " + string(lookAhead)
 		auxLexema += string(lookAhead)
 	}
 	lexema = auxLexema
@@ -240,12 +240,9 @@ func moveLookAhead() error {
 		linhaAtual++
 		var err error
 		ponteiro = 0
-		if linhaFonte, err = arquivoFinal.ReadString('\n'); err != nil {
-			if err == io.EOF { // CHECK WHY IN THE LAST LINE IT RETURNS EOF INSTEAD OF JUST RETURNING THE LINE TO BE COMPILED
-				lookAhead = FIM_ARQUIVO
-			} else {
-				return err
-			}
+		linhaFonte, err = arquivoFinal.ReadString('\n')
+		if err == io.EOF && linhaFonte == "" {
+			lookAhead = FIM_ARQUIVO
 		} else {
 			linhaFonte += "\r\n"
 			lookAhead = rune(linhaFonte[ponteiro])
