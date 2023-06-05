@@ -9,98 +9,494 @@ import (
 )
 
 const (
-	T_PROGRAMA      int = 1
-	T_FIM               = 2
-	T_VARIAVEIS         = 3
-	T_VIRGULA           = 4
-	T_PONTO_VIRGULA     = 5
-	T_SE                = 6
-	T_SENAO             = 7
-	T_FIM_SE            = 8
-	T_ENQUANTO          = 9
-	T_FIM_ENQUANTO      = 10
-	T_PARA              = 11
-	T_SETA              = 12
-	T_ATE               = 13
-	T_FIM_PARA          = 14
-	T_LER               = 15
-	T_ABRE_PAR          = 16
-	T_FECHA_PAR         = 17
-	T_ESCREVER          = 18
-	T_MAIOR             = 19
-	T_MENOR             = 20
-	T_MAIOR_IGUAL       = 21
-	T_MENOR_IGUAL       = 22
-	T_IGUAL             = 23
-	T_DIFERENTE         = 24
-	T_MAIS              = 25
-	T_MENOS             = 26
-	T_VEZES             = 27
-	T_DIVIDIDO          = 28
-	T_RESTO             = 29
-	T_ELEVADO           = 30
-	T_NUMERO            = 31
-	T_ID                = 32
-	T_FIM_FONTE         = 90
-	T_ERRO_LEX          = 98
-	T_NULO              = 99
-	FIM_ARQUIVO         = 26
+	T_PROGRAM      int = 1
+	T_END              = 2
+	T_VARIABLES        = 3
+	T_COLON            = 4
+	T_SEMI_COLON       = 5
+	T_IF               = 6
+	T_ELSE             = 7
+	T_END_IF           = 8
+	T_WHILE            = 9
+	T_END_WHILE        = 10
+	T_FOR              = 11
+	T_ARROW            = 12
+	T_TO               = 13
+	T_END_FOR          = 14
+	T_READ             = 15
+	T_OPEN_PAR         = 16
+	T_CLOSE_PAR        = 17
+	T_WRITE            = 18
+	T_BIGGER           = 19
+	T_LESS             = 20
+	T_BIGGER_EQUAL     = 21
+	T_LESS_EQUAL       = 22
+	T_EQUAL            = 23
+	T_DIFFERENT        = 24
+	T_PLUS             = 25
+	T_MINUS            = 26
+	T_TIMES            = 27
+	T_DIVIDED          = 28
+	T_REST             = 29
+	T_RAISED           = 30
+	T_NUMBER           = 31
+	T_ID               = 32
+	T_FUNCTION         = 33
+	T_END_FUNCTION     = 34
+	T_RETURN           = 35
+	T_CALL             = 36
+	T_FUNC_CALL        = 37
+	T_END_SOURCE       = 90
+	T_ERROR_LEX        = 98
+	T_NULL             = 99
+	END_FILE           = 226
 )
 
-var arquivoFinal *bufio.Reader
+var finalFile *bufio.Reader
 var lookAhead rune
 var token int
 var lexema string
-var ponteiro int
-var linhaFonte string
-var linhaAtual int
-var colunaAtual int
-var mensagemDeErro string
-
-var tokensIdentificados string
+var pointer int
+var fontLine string
+var currentLine int
+var currentColumn int
 
 func main() {
-	file, err := os.Open("/Users/I539613/Projects/University/compiler-go/test.txt")
+	// Get file path
+	path, err := os.Getwd()
+	if err != nil {
+		return
+	}
+
+	// Get file to be compiled
+	file, err := os.Open(path + "/code.txt")
 	if err != nil {
 		return
 	}
 	defer file.Close()
 
-	arquivoFinal = bufio.NewReader(file)
+	finalFile = bufio.NewReader(file)
 
-	linhaAtual = 0
-	colunaAtual = 0
-	ponteiro = 0
-	linhaFonte = ""
-	token = T_NULO
-	mensagemDeErro = ""
+	currentLine = 0
+	currentColumn = 0
+	pointer = 0
+	fontLine = ""
+	token = T_NULL
 
+	// First token position
 	moveLookAhead()
+	searchNextToken()
 
-	for token != T_FIM_FONTE && token != T_ERRO_LEX {
-		searchNextToken()
-		mostraToken()
-	}
+	// Lexical and syntax analisys
+	syntaxAnalisys()
 
-	if token == T_ERRO_LEX {
-		fmt.Println(mensagemDeErro)
-	} else {
-		fmt.Println("Sem erro léxico!")
-	}
-
+	// Log if there is no lexical error
+	fmt.Println("No lexical and syntax errors!")
 }
 
-func searchNextToken() error {
+func syntaxAnalisys() {
+	g()
+}
+
+// <G> ::= 'PROGRAM' <LIST> <CMDS> 'END'
+func g() {
+	if token == T_PROGRAM {
+		searchNextToken()
+		list()
+		functions() // VERIFY
+		cmds()
+		if token == T_END {
+			searchNextToken()
+		} else {
+			handleSyntaxError("END")
+		}
+	} else {
+		handleSyntaxError("PROGRAM")
+	}
+}
+
+// <list> ::= 'VARIABLES' <VARS> ';'
+func list() {
+	if token == T_VARIABLES {
+		searchNextToken()
+		vars()
+		if token == T_SEMI_COLON {
+			searchNextToken()
+		} else {
+			handleSyntaxError(";")
+		}
+	} else {
+		handleSyntaxError("VARIABLES")
+	}
+}
+
+// <VARS> ::= <VAR> , <VARS> | <VAR>
+func vars() {
+	varFunc()
+	for token == T_COLON {
+		searchNextToken()
+		varFunc()
+	}
+}
+
+// <VAR> ::= <ID>
+func varFunc() {
+	id()
+}
+
+// <ID> ::= [A-Z]+([A-Z]_[0-9])*
+func id() {
+	if token == T_ID {
+		searchNextToken()
+	} else {
+		handleSyntaxError("IDENTIFIER")
+	}
+}
+
+// <FUNCS> ::= <FUNC> ';' <FUNCS>
+func functions() {
+	function()
+	for token == T_SEMI_COLON {
+		searchNextToken()
+		function()
+	}
+}
+
+// <FUNC> ::= 'FUNCTION' <ID> '(' <VARS> ')' <CMDS> 'RETURN' <E> 'END_FUNTION'
+func function() {
+	if token == T_FUNCTION {
+		searchNextToken()
+		id()
+		if token == T_OPEN_PAR {
+			searchNextToken()
+			vars()
+			if token == T_CLOSE_PAR {
+				searchNextToken()
+				cmds()
+				if token == T_RETURN {
+					searchNextToken()
+					e()
+					if token == T_END_FUNCTION {
+						searchNextToken()
+					} else {
+						handleSyntaxError("END_FUNCTION")
+					}
+				} else {
+					handleSyntaxError("RETURN")
+				}
+			} else {
+				handleSyntaxError(")")
+			}
+		} else {
+			handleSyntaxError("(")
+		}
+	}
+}
+
+// <CMDS> ::= <CMD> ; <CMDS> | <CMD>
+func cmds() {
+	cmd()
+	for token == T_SEMI_COLON {
+		searchNextToken()
+		cmd()
+	}
+}
+
+// <CMD> ::= <CMD_IF>
+// <CMD> ::= <CMD_WHILE>
+// <CMD> ::= <CMD_FOR>
+// <CMD> ::= <CMD_ASSIGNMENT>
+// <CMD> ::= <CMD_READ>
+// <CMD> ::= <CMD_WRITE>
+// <CMD> ::= <CMD_CALL>
+func cmd() {
+	switch token {
+	case T_IF:
+		cmd_if()
+		break
+	case T_WHILE:
+		cmd_while()
+		break
+	case T_FOR:
+		cmd_for()
+		break
+	case T_ID:
+		cmd_assignment()
+		break
+	case T_READ:
+		cmd_read()
+		break
+	case T_WRITE:
+		cmd_write()
+		break
+	case T_CALL:
+		cmd_call()
+		break
+	default:
+		handleSyntaxError("COMMAND NOT IDENTIFIED")
+	}
+}
+
+// <CMD_IF> ::= 'IF' '(' <CONDITION> ')' <CMDS> 'END_IF'
+// <CMD_IF> ::= 'IF' '(' <CONDITION> ')' <CMDS> 'ELSE' <CMDS> 'END_IF'
+func cmd_if() {
+	if token == T_IF {
+		searchNextToken()
+		if token == T_OPEN_PAR {
+			searchNextToken()
+			condition()
+			if token == T_CLOSE_PAR {
+				searchNextToken()
+				cmds()
+				if token == T_ELSE {
+					searchNextToken()
+					cmds()
+				}
+				if token == T_END_IF {
+					searchNextToken()
+				} else {
+					handleSyntaxError("END_IF")
+				}
+			} else {
+				handleSyntaxError(")")
+			}
+		} else {
+			handleSyntaxError("(")
+		}
+	}
+}
+
+// <CMD_WHILE> ::= 'WHILE' <CONDITION> <CMDS> 'END_WHILE'
+func cmd_while() {
+	if token == T_WHILE {
+		searchNextToken()
+		condition()
+		cmds()
+		if token == T_END_WHILE {
+			searchNextToken()
+		} else {
+			handleSyntaxError("END_WHILE")
+		}
+	} else {
+		handleSyntaxError("WHILE")
+	}
+}
+
+// <CMD_FOR> ::= 'FOR' <VAR> '<-' <E> 'TO' <E> <CMDS> 'END_FOR'
+func cmd_for() {
+	if token == T_FOR {
+		searchNextToken()
+		varFunc()
+		if token == T_ARROW {
+			searchNextToken()
+			e()
+			if token == T_TO {
+				searchNextToken()
+				e()
+				cmds()
+				if token == T_END_FOR {
+					searchNextToken()
+				} else {
+					handleSyntaxError("END_FOR")
+				}
+			} else {
+				handleSyntaxError("TO")
+			}
+		} else {
+			handleSyntaxError("(<-)")
+		}
+	} else {
+		handleSyntaxError("FOR")
+	}
+}
+
+// <CMD_ASSIGNMENT> ::= <VAR> '<-' <E>
+func cmd_assignment() {
+	varFunc()
+	if token == T_ARROW {
+		searchNextToken()
+		e()
+	} else {
+		handleSyntaxError("<-")
+	}
+}
+
+// <CMD_READ> ::= 'READ' '(' <VAR> ')'
+func cmd_read() {
+	if token == T_READ {
+		searchNextToken()
+		if token == T_OPEN_PAR {
+			searchNextToken()
+			varFunc()
+			if token == T_CLOSE_PAR {
+				searchNextToken()
+			} else {
+				handleSyntaxError(")")
+			}
+		} else {
+			handleSyntaxError("(")
+		}
+	} else {
+		handleSyntaxError("READ")
+	}
+}
+
+// <CMD_WRITE> ::= 'WRITE' '(' <E> ')'
+func cmd_write() {
+	if token == T_WRITE {
+		searchNextToken()
+		if token == T_OPEN_PAR {
+			searchNextToken()
+			e()
+			if token == T_CLOSE_PAR {
+				searchNextToken()
+			} else {
+				handleSyntaxError(")")
+			}
+		} else {
+			handleSyntaxError("(")
+		}
+	} else {
+		handleSyntaxError("WRITE")
+	}
+}
+
+// <CMD_CALL> ::= 'CALL' <VAR> <FUNC_CALL>
+func cmd_call() {
+	if token == T_CALL {
+		searchNextToken()
+		varFunc()
+		function_call()
+	} else {
+		handleSyntaxError("CALL")
+	}
+}
+
+// <FUNC_CALL> ::= <ID> '(' <VARS> ')'
+func function_call() {
+	if token == T_ID {
+		searchNextToken()
+		if token == T_OPEN_PAR {
+			searchNextToken()
+			vars()
+			if token == T_CLOSE_PAR {
+				searchNextToken()
+			} else {
+				handleSyntaxError(")")
+			}
+		} else {
+			handleSyntaxError("(")
+		}
+	}
+}
+
+// <CONDITION> ::= <E> '>' <E>
+// <CONDITION> ::= <E> '>=' <E>
+// <CONDITION> ::= <E> '!-' <E>
+// <CONDITION> ::= <E> '<=' <E>
+// <CONDITION> ::= <E> '<' <E>
+// <CONDITION> ::= <E> '==' <E>
+func condition() {
+	e()
+	switch token {
+	case T_BIGGER:
+		searchNextToken()
+		e()
+		break
+	case T_LESS:
+		searchNextToken()
+		e()
+		break
+	case T_BIGGER_EQUAL:
+		searchNextToken()
+		e()
+		break
+	case T_LESS_EQUAL:
+		searchNextToken()
+		e()
+		break
+	case T_EQUAL:
+		searchNextToken()
+		e()
+		break
+	case T_DIFFERENT:
+		searchNextToken()
+		e()
+		break
+	default:
+		handleSyntaxError("OPERATOR")
+	}
+}
+
+// <E> ::= <E> + <T>
+// <E> ::= <E> - <T>
+// <E> ::= <T>
+func e() {
+	t()
+	for (token == T_PLUS) || (token == T_MINUS) {
+		searchNextToken()
+		t()
+	}
+}
+
+// <T> ::= <T> * <F>
+// <T> ::= <T> / <F>
+// <T> ::= <T> % <F>
+// <T> ::= <F>
+func t() {
+	f()
+	for (token == T_TIMES) || (token == T_DIVIDED) || (token == T_REST) {
+		searchNextToken()
+		f()
+	}
+}
+
+// <F> ::= -<F>
+// <F> ::= <X> ** <F>
+// <F> ::= <X>
+func f() {
+	if token == T_MINUS {
+		searchNextToken()
+		f()
+	} else {
+		x()
+		for token == T_RAISED {
+			searchNextToken()
+			x()
+		}
+	}
+}
+
+// <X> ::= '(' <E> ')'
+// <X> ::= [0-9]+('.'[0-9]+)
+// <X> ::= <VAR>
+func x() {
+	switch token {
+	case T_ID:
+		searchNextToken()
+	case T_NUMBER:
+		searchNextToken()
+	case T_OPEN_PAR:
+		{
+			searchNextToken()
+			e()
+			if token == T_CLOSE_PAR {
+				searchNextToken()
+			} else {
+				handleSyntaxError(")")
+			}
+		}
+	default:
+		handleSyntaxError("INVALID FACTOR")
+	}
+}
+
+func searchNextToken() {
 	auxLexema := ""
-	// Salto espa�oes enters e tabs at� o inicio do proximo token
 	for lookAhead == 9 || lookAhead == '\n' || lookAhead == 8 || lookAhead == 11 || lookAhead == 12 || lookAhead == '\r' || lookAhead == 32 {
 		moveLookAhead()
 	}
 
-	/*--------------------------------------------------------------*
-	 * Caso o primeiro caracter seja alfabetico, procuro capturar a *
-	 * sequencia de caracteres que se segue a ele e classifica-la   *
-	 *--------------------------------------------------------------*/
 	if (lookAhead >= 'A') && (lookAhead <= 'Z') {
 		auxLexema += string(lookAhead)
 		moveLookAhead()
@@ -112,37 +508,43 @@ func searchNextToken() error {
 
 		lexema = auxLexema
 
-		// Classify the token as a reserved word or an identifier
-		//var token int // Assuming token is an integer type
 		switch lexema {
-		case "PROGRAMA":
-			token = T_PROGRAMA
-		case "FIM":
-			token = T_FIM
-		case "VARIAVEIS":
-			token = T_VARIAVEIS
-		case "SE":
-			token = T_SE
-		case "SENAO":
-			token = T_SENAO
-		case "FIM_SE":
-			token = T_FIM_SE
-		case "ENQUANTO":
-			token = T_ENQUANTO
-		case "FIM_ENQUANTO":
-			token = T_FIM_ENQUANTO
-		case "PARA":
-			token = T_PARA
-		case "ATE":
-			token = T_ATE
-		case "FIM_PARA":
-			token = T_FIM_PARA
-		case "LER":
-			token = T_LER
-		case "ESCREVER":
-			token = T_ESCREVER
+		case "PROGRAM":
+			token = T_PROGRAM
+		case "END":
+			token = T_END
+		case "VARIABLES":
+			token = T_VARIABLES
+		case "IF":
+			token = T_IF
+		case "ELSE":
+			token = T_ELSE
+		case "END_IF":
+			token = T_END_IF
+		case "WHILE":
+			token = T_WHILE
+		case "END_WHILE":
+			token = T_END_WHILE
+		case "FOR":
+			token = T_FOR
+		case "TO":
+			token = T_TO
+		case "END_FOR":
+			token = T_END_FOR
+		case "READ":
+			token = T_READ
+		case "WRITE":
+			token = T_WRITE
+		case "FUNCTION":
+			token = T_FUNCTION
+		case "END_FUNCTION":
+			token = T_END_FUNCTION
+		case "RETURN":
+			token = T_RETURN
+		case "CALL":
+			token = T_CALL
 		default:
-			token = T_ID // TODO ver pq todo token que deveria ser erro léxico estar retornando um T_ID
+			token = T_ID
 		}
 
 	} else if (lookAhead >= '0') && (lookAhead <= '9') {
@@ -152,30 +554,30 @@ func searchNextToken() error {
 			auxLexema += string(lookAhead)
 			moveLookAhead()
 		}
-		token = T_NUMERO
+		token = T_NUMBER
 	} else if lookAhead == '(' {
 		auxLexema += string(lookAhead)
-		token = T_ABRE_PAR
+		token = T_OPEN_PAR
 		moveLookAhead()
 	} else if lookAhead == ')' {
 		auxLexema += string(lookAhead)
-		token = T_FECHA_PAR
+		token = T_CLOSE_PAR
 		moveLookAhead()
 	} else if lookAhead == ';' {
 		auxLexema += string(lookAhead)
-		token = T_PONTO_VIRGULA
+		token = T_SEMI_COLON
 		moveLookAhead()
 	} else if lookAhead == ',' {
 		auxLexema += string(lookAhead)
-		token = T_VIRGULA
+		token = T_COLON
 		moveLookAhead()
 	} else if lookAhead == '+' {
 		auxLexema += string(lookAhead)
-		token = T_MAIS
+		token = T_PLUS
 		moveLookAhead()
 	} else if lookAhead == '-' {
 		auxLexema += string(lookAhead)
-		token = T_MENOS
+		token = T_MINUS
 		moveLookAhead()
 	} else if lookAhead == '*' {
 		auxLexema += string(lookAhead)
@@ -183,35 +585,31 @@ func searchNextToken() error {
 		if lookAhead == '*' {
 			auxLexema += string(lookAhead)
 			moveLookAhead()
-			token = T_ELEVADO
+			token = T_RAISED
 		} else {
-			token = T_VEZES
+			token = T_TIMES
 		}
 	} else if lookAhead == '/' {
 		auxLexema += string(lookAhead)
-		token = T_DIVIDIDO
+		token = T_DIVIDED
 		moveLookAhead()
 	} else if lookAhead == '%' {
 		auxLexema += string(lookAhead)
-		token = T_RESTO
+		token = T_REST
 		moveLookAhead()
 	} else if lookAhead == '<' {
 		auxLexema += string(lookAhead)
 		moveLookAhead()
-		if lookAhead == '>' {
+		if lookAhead == '-' {
 			auxLexema += string(lookAhead)
 			moveLookAhead()
-			token = T_DIFERENTE
-		} else if lookAhead == '-' {
-			auxLexema += string(lookAhead)
-			moveLookAhead()
-			token = T_SETA
+			token = T_ARROW
 		} else if lookAhead == '=' {
 			auxLexema += string(lookAhead)
 			moveLookAhead()
-			token = T_MENOR_IGUAL
+			token = T_LESS_EQUAL
 		} else {
-			token = T_MENOR
+			token = T_LESS
 		}
 	} else if lookAhead == '>' {
 		auxLexema += string(lookAhead)
@@ -219,160 +617,56 @@ func searchNextToken() error {
 		if lookAhead == '=' {
 			auxLexema += string(lookAhead)
 			moveLookAhead()
-			token = T_MAIOR_IGUAL
+			token = T_BIGGER_EQUAL
 		} else {
-			token = T_MAIOR
+			token = T_BIGGER
 		}
-	} else if lookAhead == FIM_ARQUIVO {
-		token = T_FIM_FONTE
-	} else {
-		token = T_ERRO_LEX // EXAMPLE OF LEXICAL ERROR: &
-		mensagemDeErro = "Erro Léxico na linha: " + fmt.Sprint(linhaAtual) + "\nReconhecido ao atingir a coluna: " + fmt.Sprint(colunaAtual) + "\nLinha do Erro: <" + string(linhaFonte) + ">\nToken desconhecido: " + string(lookAhead)
+	} else if lookAhead == '!' {
 		auxLexema += string(lookAhead)
+		moveLookAhead()
+		if lookAhead == '=' {
+			auxLexema += string(lookAhead)
+			moveLookAhead()
+			token = T_DIFFERENT
+		}
+	} else if lookAhead == END_FILE {
+		token = T_END_SOURCE
+	} else {
+		token = T_ERROR_LEX
+		auxLexema += string(lookAhead)
+		handleLexicalError()
 	}
 	lexema = auxLexema
-	fmt.Println(token)
-	return nil
 }
 
-func moveLookAhead() error {
-	if ponteiro+1 > len(linhaFonte) {
-		linhaAtual++
+func moveLookAhead() {
+	if pointer+1 > len(fontLine) {
+		currentLine++
 		var err error
-		ponteiro = 0
-		linhaFonte, err = arquivoFinal.ReadString('\n')
-		if err == io.EOF && linhaFonte == "" {
-			lookAhead = FIM_ARQUIVO
+		pointer = 0
+		fontLine, err = finalFile.ReadString('\n')
+		if err == io.EOF && fontLine == "" {
+			lookAhead = END_FILE
 		} else {
-			linhaFonte += "\r\n"
-			lookAhead = rune(linhaFonte[ponteiro])
+			fontLine += "\r\n"
+			lookAhead = rune(fontLine[pointer])
 		}
 	} else {
-		lookAhead = rune(linhaFonte[ponteiro])
+		lookAhead = rune(fontLine[pointer])
 	}
 	if unicode.IsLetter(lookAhead) {
 		lookAhead = unicode.ToUpper(lookAhead)
 	}
-	ponteiro++
-	colunaAtual = ponteiro + 1
-
-	return nil
+	pointer++
+	currentColumn = pointer + 1
 }
 
-func mostraToken() {
-	var tokenLexema string
-	switch token {
-	case T_PROGRAMA:
-		tokenLexema = "T_PROGRAMA"
-	case T_FIM:
-		tokenLexema = "T_FIM"
-	case T_VARIAVEIS:
-		tokenLexema = "T_VARIAVEIS"
-	case T_VIRGULA:
-		tokenLexema = "T_VIRGULA"
-	case T_PONTO_VIRGULA:
-		tokenLexema = "T_PONTO_VIRGULA"
-	case T_SE:
-		tokenLexema = "T_SE"
-	case T_SENAO:
-		tokenLexema = "T_SENAO"
-	case T_FIM_SE:
-		tokenLexema = "T_FIM_SE"
-	case T_ENQUANTO:
-		tokenLexema = "T_ENQUANTO"
-	case T_FIM_ENQUANTO:
-		tokenLexema = "T_FIM_ENQUANTO"
-	case T_PARA:
-		tokenLexema = "T_PARA"
-	case T_SETA:
-		tokenLexema = "T_SETA"
-	case T_ATE:
-		tokenLexema = "T_ATE"
-	case T_FIM_PARA:
-		tokenLexema = "T_FIM_PARA"
-	case T_LER:
-		tokenLexema = "T_LER"
-	case T_ABRE_PAR:
-		tokenLexema = "T_ABRE_PAR"
-	case T_FECHA_PAR:
-		tokenLexema = "T_FECHA_PAR"
-	case T_ESCREVER:
-		tokenLexema = "T_ESCREVER"
-	case T_MAIOR:
-		tokenLexema = "T_MAIOR"
-	case T_MENOR:
-		tokenLexema = "T_MENOR"
-	case T_MAIOR_IGUAL:
-		tokenLexema = "T_MAIOR_IGUAL"
-	case T_MENOR_IGUAL:
-		tokenLexema = "T_MENOR_IGUAL"
-	case T_IGUAL:
-		tokenLexema = "T_IGUAL"
-	case T_DIFERENTE:
-		tokenLexema = "T_DIFERENTE"
-	case T_MAIS:
-		tokenLexema = "T_MAIS"
-	case T_MENOS:
-		tokenLexema = "T_MENOS"
-	case T_VEZES:
-		tokenLexema = "T_VEZES"
-	case T_DIVIDIDO:
-		tokenLexema = "T_DIVIDIDO"
-	case T_RESTO:
-		tokenLexema = "T_RESTO"
-	case T_ELEVADO:
-		tokenLexema = "T_ELEVADO"
-	case T_NUMERO:
-		tokenLexema = "T_NUMERO"
-	case T_ID:
-		tokenLexema = "T_ID"
-	case T_FIM_FONTE:
-		tokenLexema = "T_FIM_FONTE"
-	case T_ERRO_LEX:
-		tokenLexema = "T_ERRO_LEX"
-	case T_NULO:
-		tokenLexema = "T_NULO"
-	default:
-		tokenLexema = "N/A"
-	}
-	fmt.Println(tokenLexema + " ( " + lexema + " )")
-	acumulaToken(tokenLexema + " ( " + lexema + " )")
-	tokenLexema += lexema
+func handleSyntaxError(expected string) {
+	fmt.Println("Syntax Error. \nLine: " + fmt.Sprint(currentLine) + "\nColumn: " + fmt.Sprint(currentColumn) + "\nError: \n" + fontLine + expected + " expected, but found: " + lexema)
+	os.Exit(1)
 }
 
-func acumulaToken(tokenIdentificado string) {
-	tokensIdentificados += tokenIdentificado
-	tokensIdentificados += "\n"
+func handleLexicalError() {
+	fmt.Println("Lexical Error. \nLine: " + fmt.Sprint(currentLine) + "\nColumn: " + fmt.Sprint(currentColumn) + "\nError: \n" + fontLine + "Token unknown: " + string(lookAhead))
+	os.Exit(1)
 }
-
-// func validateStringLexema() {
-// 	if lexema == "PROGRAMA" {
-// 		token = T_PROGRAMA
-// 	} else if lexema == "FIM" {
-// 		token = T_FIM
-// 	} else if lexema == "VARIAVEIS" {
-// 		token = T_VARIAVEIS
-// 	} else if lexema == "SE" {
-// 		token = T_SE
-// 	} else if lexema == "SENAO" {
-// 		token = T_SENAO
-// 	} else if lexema == "FIM_SE" {
-// 		token = T_FIM_SE
-// 	} else if lexema == "ENQUANTO" {
-// 		token = T_ENQUANTO
-// 	} else if lexema == "FIM_ENQUANTO" {
-// 		token = T_FIM_ENQUANTO
-// 	} else if lexema == "PARA" {
-// 		token = T_PARA
-// 	} else if lexema == "ATE" {
-// 		token = T_ATE
-// 	} else if lexema == "FIM_PARA" {
-// 		token = T_FIM_PARA
-// 	} else if lexema == "LER" {
-// 		token = T_LER
-// 	} else if lexema == "ESCREVER" {
-// 		token = T_ESCREVER
-// 	} else {
-// 		token = T_ID
-// 	}
-// }

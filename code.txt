@@ -1,0 +1,32 @@
+PROGRAM 
+VARIABLES test10, test12;
+
+FUNCTION CalculateAverage(values, count)
+    total <- 0;
+    FOR i <- 1 TO count
+        total <- total + 10
+    END_FOR;
+    average <- total / count
+    RETURN average
+END_FUNCTION;
+
+FUNCTION CalculateAverage(values, count)
+    total <- 0;
+    FOR i <- 1 TO count
+        total <- total + 10
+    END_FOR;
+    average <- total / count
+    RETURN average
+END_FUNCTION
+
+IF (test != 10)
+READ (test)
+ELSE
+WRITE (test)
+END_IF;
+
+CALL test CalculateAverage(values, count);
+
+READ (test10)
+
+END;
