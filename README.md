@@ -10,7 +10,6 @@ The semantic part validates if the variables are declared or not.
 
 # Gramatic
 ```
-
 <G> ::= 'PROGRAM' <LIST> <FUNCS> <CMDS> 'END'
 <LIST> ::= 'VARIABLES' <VARS> ';'
 <VARS> ::= <VAR> ',' <VARS>
@@ -56,5 +55,4 @@ The semantic part validates if the variables are declared or not.
 <X> ::= [0-9]+('.'[0-9]+)
 <X> ::= <VAR>
 <ID> ::= [A-Z]+([A-Z]_[0-9])
-
 ```
