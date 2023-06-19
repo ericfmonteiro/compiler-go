@@ -1,5 +1,5 @@
 PROGRAM 
-VARIABLES test10, test12;
+VARIABLES test10, test12, test, total, count, values, average, i;
 
 FUNCTION CalculateAverage(values, count)
     total <- 0;
@@ -24,6 +24,8 @@ READ (test)
 ELSE
 WRITE (test)
 END_IF;
+
+test <- 10;
 
 CALL test CalculateAverage(values, count);
 

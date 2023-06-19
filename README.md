@@ -1,94 +1,14 @@
 # compiler-go
 Compiler based on an academic activity grammar prompt in Golang
 
+# How to run
+To run this code, you must have golang installed in your machine. After that, execute the command go run main.go to execute the main file.
+
+# Semantic
+The semantic part validates if the variables are declared or not.
+
 
 # Gramatic
-
-<!-- <G> ::= 'PROGRAMA' <LISTA> <CMDS> 'FIM'
-<LISTA> ::= 'VARIAVEIS' <VARS>
-<VARS> ::= <VAR> , <VARS>
-<VARS> ::= <VAR> 
-<CMDS> ::= <CMD> ; <CMDS>
-<CMDS> ::= <CMD>
-<CMD> ::= <CMD_SE>
-<CMD> ::= <CMD_ENQUANTO>
-<CMD> ::= <CMD_PARA>
-<CMD> ::= <CMD_ATRIBUICAO>
-<CMD> ::= <CMD_LER>
-<CMD> ::= <CMD_ESCREVER>
-<CMD_SE> ::= 'SE' <CONDICAO> <CMDS> 'FIM_SE'
-<CMD_SE> ::= 'SE' <CONDICAO> <CMDS> 'SENAO' <CMDS> 'FIM_SE'
-<CMD_ENQUANTO> ::= 'ENQUANTO' <CONDICAO> <CMDS> 'FIM_ENQUANTO'
-<CMD_PARA> ::= 'PARA' <VAR> '<-' <E> 'ATE' <E> <CMDS> 'FIM_PARA' 
-<CMD_ATRIBUICAO> ::= <VAR> '<-' <E>
-<CMD_LER> ::= 'LER' '(' <VAR> ')' 
-<CMD_ESCREVER> ::= 'ESCREVER' '(' <E> ')'
-<CONDICAO> ::= <E> '>' <E> 
-<CONDICAO> ::= <E> '>=' <E> 
-<CONDICAO> ::= <E> '<>' <E> 
-<CONDICAO> ::= <E> '<=' <E> 
-<CONDICAO> ::= <E> '<' <E> 
-<CONDICAO> ::= <E> '==' <E>
-<E> ::= <E> + <T>
-<E> ::= <E> - <T>
-<E> ::= <T>
-<T> ::= <T> * <F>
-<T> ::= <T> / <F>
-<T> ::= <T> % <F>
-<T> ::= <F>
-<F> ::= -<F>
-<F> ::= <X> ** <F>
-<F> ::= <X>
-<X> ::= '(' <E> ')'
-<X> ::= [0-9]+('.'[0-9]+)
-<X> ::= <VAR> -->
-
-
-
-
-
-<G> ::= 'PROGRAMA' <LISTA> <CMDS> 'FIM'
-<LISTA> ::= 'VARIAVEIS' <VARS> ';'
-<VARS> ::= <VAR> , <VARS>
-<VARS> ::= <VAR> 
-<VAR>  ::= <ID>
-<CMDS> ::= <CMD> ; <CMDS>
-<CMDS> ::= <CMD>
-<CMD> ::= <CMD_SE>
-<CMD> ::= <CMD_ENQUANTO>
-<CMD> ::= <CMD_PARA>
-<CMD> ::= <CMD_ATRIBUICAO>
-<CMD> ::= <CMD_LER>
-<CMD> ::= <CMD_ESCREVER>
-<CMD_SE> ::= 'SE' '(' <CONDICAO> ')' <CMDS> 'FIM_SE' 
-<CMD_SE> ::= 'SE' '(' <CONDICAO> ')' <CMDS> 'SENAO' <CMDS> 'FIM_SE' 
-<CMD_ENQUANTO> ::= 'ENQUANTO' <CONDICAO> <CMDS> 'FIM_ENQUANTO'
-<CMD_PARA> ::= 'PARA' <VAR> '<-' <E> 'ATE' <E> <CMDS> 'FIM_PARA' 
-<CMD_ATRIBUICAO> ::= <VAR> '<-' <E>
-<CMD_LER> ::= 'LER' '(' <VAR> ')' 
-<CMD_ESCREVER> ::= 'ESCREVER' '(' <E> ')'
-<CONDICAO> ::= <E> '>' <E> 
-<CONDICAO> ::= <E> '>=' <E> 
-<CONDICAO> ::= <E> '<>' <E> 
-<CONDICAO> ::= <E> '<=' <E> 
-<CONDICAO> ::= <E> '<' <E> 
-<CONDICAO> ::= <E> '==' <E>
-<E> ::= <E> + <T>
-<E> ::= <E> - <T>
-<E> ::= <T>
-<T> ::= <T> * <F>
-<T> ::= <T> / <F>
-<T> ::= <T> % <F>
-<T> ::= <F>
-<F> ::= -<X>
-<F> ::= <X> ** <F>
-<F> ::= <X>
-<X> ::= '(' <E> ')'
-<X> ::= [0-9]+('.'[0-9]+)
-<X> ::= <VAR>
-<ID> ::= [A-Z]+([A-Z]_[0-9]*)
-
-
 
 <G> ::= 'PROGRAM' <LIST> <FUNCS> <CMDS> 'END'
 <LIST> ::= 'VARIABLES' <VARS> ';'
@@ -113,11 +33,11 @@ Compiler based on an academic activity grammar prompt in Golang
 <CMD_ASSIGNMENT> ::= <VAR> '<-' <E>
 <CMD_READ> ::= 'READ' '(' <VAR> ')'
 <CMD_WRITE> ::= 'WRITE' '(' <E> ')'
-<CMD_CALL> ::= 'CALL' <VAR> <FUNC_CALL> ///////////
-<FUNC_CALL> ::= <ID> '(' <VARS> ')' ////////////
+<CMD_CALL> ::= 'CALL' <VAR> <FUNC_CALL>
+<FUNC_CALL> ::= <ID> '(' <VARS> ')'
 <CONDITION> ::= <E> '>' <E>
 <CONDITION> ::= <E> '>=' <E>
-<CONDITION> ::= <E> '<>' <E>
+<CONDITION> ::= <E> '!=' <E>
 <CONDITION> ::= <E> '<=' <E>
 <CONDITION> ::= <E> '<' <E>
 <CONDITION> ::= <E> '==' <E>

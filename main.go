@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"unicode"
 )
 
@@ -61,6 +62,13 @@ var fontLine string
 var currentLine int
 var currentColumn int
 
+// Semantics
+var lastLexema string
+var symbolTable = make(map[string]int)
+var node_1 NodeSemanticStack
+var node_2 NodeSemanticStack
+var semanticStack SemanticStack
+
 func main() {
 	// Get file path
 	path, err := os.Getwd()
@@ -91,7 +99,7 @@ func main() {
 	syntaxAnalisys()
 
 	// Log if there is no lexical error
-	fmt.Println("No lexical and syntax errors!")
+	fmt.Println("No lexical, syntax or semantic errors!")
 }
 
 func syntaxAnalisys() {
@@ -103,7 +111,7 @@ func g() {
 	if token == T_PROGRAM {
 		searchNextToken()
 		list()
-		functions() // VERIFY
+		functions()
 		cmds()
 		if token == T_END {
 			searchNextToken()
@@ -115,7 +123,7 @@ func g() {
 	}
 }
 
-// <list> ::= 'VARIABLES' <VARS> ';'
+// <LIST> ::= 'VARIABLES' <VARS> ';'
 func list() {
 	if token == T_VARIABLES {
 		searchNextToken()
@@ -142,6 +150,22 @@ func vars() {
 // <VAR> ::= <ID>
 func varFunc() {
 	id()
+	semanticAnalisys(2)
+}
+
+// <VAR> ::= <ID>
+func variable() {
+	id()
+	semanticAnalisys(4)
+}
+
+// <VARS> ::= <VAR> , <VARS> | <VAR>
+func varsParam() {
+	variable()
+	for token == T_COLON {
+		searchNextToken()
+		variable()
+	}
 }
 
 // <ID> ::= [A-Z]+([A-Z]_[0-9])*
@@ -153,6 +177,7 @@ func id() {
 	}
 }
 
+// ADD VALIDATION IN SEMANTICS
 // <FUNCS> ::= <FUNC> ';' <FUNCS>
 func functions() {
 	function()
@@ -162,6 +187,7 @@ func functions() {
 	}
 }
 
+// ADD VALIDATION IN SEMANTICS
 // <FUNC> ::= 'FUNCTION' <ID> '(' <VARS> ')' <CMDS> 'RETURN' <E> 'END_FUNTION'
 func function() {
 	if token == T_FUNCTION {
@@ -169,7 +195,7 @@ func function() {
 		id()
 		if token == T_OPEN_PAR {
 			searchNextToken()
-			vars()
+			varsParam()
 			if token == T_CLOSE_PAR {
 				searchNextToken()
 				cmds()
@@ -245,6 +271,7 @@ func cmd_if() {
 		if token == T_OPEN_PAR {
 			searchNextToken()
 			condition()
+			semanticAnalisys(17)
 			if token == T_CLOSE_PAR {
 				searchNextToken()
 				cmds()
@@ -271,6 +298,7 @@ func cmd_while() {
 	if token == T_WHILE {
 		searchNextToken()
 		condition()
+		semanticAnalisys(15)
 		cmds()
 		if token == T_END_WHILE {
 			searchNextToken()
@@ -286,7 +314,7 @@ func cmd_while() {
 func cmd_for() {
 	if token == T_FOR {
 		searchNextToken()
-		varFunc()
+		variable()
 		if token == T_ARROW {
 			searchNextToken()
 			e()
@@ -312,10 +340,11 @@ func cmd_for() {
 
 // <CMD_ASSIGNMENT> ::= <VAR> '<-' <E>
 func cmd_assignment() {
-	varFunc()
+	variable()
 	if token == T_ARROW {
 		searchNextToken()
 		e()
+		semanticAnalisys(3)
 	} else {
 		handleSyntaxError("<-")
 	}
@@ -327,9 +356,10 @@ func cmd_read() {
 		searchNextToken()
 		if token == T_OPEN_PAR {
 			searchNextToken()
-			varFunc()
+			variable()
 			if token == T_CLOSE_PAR {
 				searchNextToken()
+				semanticAnalisys(14)
 			} else {
 				handleSyntaxError(")")
 			}
@@ -350,6 +380,7 @@ func cmd_write() {
 			e()
 			if token == T_CLOSE_PAR {
 				searchNextToken()
+				semanticAnalisys(25)
 			} else {
 				handleSyntaxError(")")
 			}
@@ -365,7 +396,7 @@ func cmd_write() {
 func cmd_call() {
 	if token == T_CALL {
 		searchNextToken()
-		varFunc()
+		variable()
 		function_call()
 	} else {
 		handleSyntaxError("CALL")
@@ -378,7 +409,7 @@ func function_call() {
 		searchNextToken()
 		if token == T_OPEN_PAR {
 			searchNextToken()
-			vars()
+			varsParam()
 			if token == T_CLOSE_PAR {
 				searchNextToken()
 			} else {
@@ -402,26 +433,32 @@ func condition() {
 	case T_BIGGER:
 		searchNextToken()
 		e()
+		semanticAnalisys(19)
 		break
 	case T_LESS:
 		searchNextToken()
 		e()
+		semanticAnalisys(20)
 		break
 	case T_BIGGER_EQUAL:
 		searchNextToken()
 		e()
+		semanticAnalisys(21)
 		break
 	case T_LESS_EQUAL:
 		searchNextToken()
 		e()
+		semanticAnalisys(22)
 		break
 	case T_EQUAL:
 		searchNextToken()
 		e()
+		semanticAnalisys(23)
 		break
 	case T_DIFFERENT:
 		searchNextToken()
 		e()
+		semanticAnalisys(24)
 		break
 	default:
 		handleSyntaxError("OPERATOR")
@@ -434,8 +471,16 @@ func condition() {
 func e() {
 	t()
 	for (token == T_PLUS) || (token == T_MINUS) {
-		searchNextToken()
-		t()
+		switch token {
+		case T_PLUS:
+			searchNextToken()
+			t()
+			semanticAnalisys(5)
+		case T_MINUS:
+			searchNextToken()
+			t()
+			semanticAnalisys(6)
+		}
 	}
 }
 
@@ -446,8 +491,20 @@ func e() {
 func t() {
 	f()
 	for (token == T_TIMES) || (token == T_DIVIDED) || (token == T_REST) {
-		searchNextToken()
-		f()
+		switch token {
+		case T_TIMES:
+			searchNextToken()
+			t()
+			semanticAnalisys(7)
+		case T_DIVIDED:
+			searchNextToken()
+			t()
+			semanticAnalisys(8)
+		case T_REST:
+			searchNextToken()
+			t()
+			semanticAnalisys(9)
+		}
 	}
 }
 
@@ -463,6 +520,7 @@ func f() {
 		for token == T_RAISED {
 			searchNextToken()
 			x()
+			semanticAnalisys(10)
 		}
 	}
 }
@@ -474,8 +532,10 @@ func x() {
 	switch token {
 	case T_ID:
 		searchNextToken()
+		semanticAnalisys(11)
 	case T_NUMBER:
 		searchNextToken()
+		semanticAnalisys(12)
 	case T_OPEN_PAR:
 		{
 			searchNextToken()
@@ -485,6 +545,7 @@ func x() {
 			} else {
 				handleSyntaxError(")")
 			}
+			semanticAnalisys(13)
 		}
 	default:
 		handleSyntaxError("INVALID FACTOR")
@@ -493,6 +554,11 @@ func x() {
 
 func searchNextToken() {
 	auxLexema := ""
+
+	if lexema != "" {
+		lastLexema = lexema
+	}
+
 	for lookAhead == 9 || lookAhead == '\n' || lookAhead == 8 || lookAhead == 11 || lookAhead == 12 || lookAhead == '\r' || lookAhead == 32 {
 		moveLookAhead()
 	}
@@ -669,4 +735,161 @@ func handleSyntaxError(expected string) {
 func handleLexicalError() {
 	fmt.Println("Lexical Error. \nLine: " + fmt.Sprint(currentLine) + "\nColumn: " + fmt.Sprint(currentColumn) + "\nError: \n" + fontLine + "Token unknown: " + string(lookAhead))
 	os.Exit(1)
+}
+
+func semanticAnalisys(ruleNumber int) {
+	switch ruleNumber {
+	case 2:
+		insertInSymbolTable(lastLexema)
+	case 3:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+	case 4:
+		if isInSymbolTable(lastLexema) {
+			semanticStack.push(lastLexema, 4)
+		}
+	case 5:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+"+"+node_2.getLowerCaseCode(), 5)
+		break
+	case 6:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+"-"+node_2.getLowerCaseCode(), 6)
+		break
+	case 7:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+"*"+node_2.getLowerCaseCode(), 7)
+		break
+	case 8:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+"/"+node_2.getLowerCaseCode(), 8)
+		break
+	case 9:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+"%"+node_2.getLowerCaseCode(), 9)
+		break
+	case 10:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+"**"+node_2.getLowerCaseCode(), 10)
+		break
+	case 11:
+		if isInSymbolTable(lastLexema) {
+			semanticStack.push(lastLexema, 11)
+		}
+		break
+	case 12:
+		semanticStack.push(lastLexema, 12)
+		break
+	case 13:
+		node_1 = semanticStack.pop()
+		semanticStack.push("("+node_1.getLowerCaseCode()+")", 13)
+		break
+	case 14:
+		node_1 = semanticStack.pop()
+		break
+	case 15:
+		node_1 = semanticStack.pop()
+		break
+	case 17:
+		node_1 = semanticStack.pop()
+		break
+	case 19:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+" > "+node_2.getLowerCaseCode(), 19)
+		break
+	case 20:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+" < "+node_2.getLowerCaseCode(), 20)
+		break
+	case 21:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+" >= "+node_2.getLowerCaseCode(), 21)
+		break
+	case 22:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+" <= "+node_2.getLowerCaseCode(), 22)
+		break
+	case 23:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+" == "+node_2.getLowerCaseCode(), 23)
+		break
+	case 24:
+		node_2 = semanticStack.pop()
+		node_1 = semanticStack.pop()
+		semanticStack.push(node_1.getLowerCaseCode()+" != "+node_2.getLowerCaseCode(), 24)
+		break
+	case 25:
+		node_1 = semanticStack.pop()
+		break
+	}
+}
+
+func isInSymbolTable(lastLexema string) bool {
+	_, ok := symbolTable[lastLexema]
+	if !ok {
+		handleSemanticNotDeclaredError(lastLexema)
+		return false
+	} else {
+		return true
+	}
+}
+
+func insertInSymbolTable(lastLexema string) {
+	_, ok := symbolTable[lastLexema]
+	if ok {
+		handleSemanticAlreadyDeclaredError(lastLexema)
+	} else {
+		symbolTable[lastLexema] = 0
+	}
+}
+
+func handleSemanticNotDeclaredError(lastLexema string) {
+	fmt.Println("Semantic Error. \nLine: " + fmt.Sprint(currentLine) + " \nError: \nVariable " + lastLexema + " is not declared!")
+	os.Exit(1)
+}
+
+func handleSemanticAlreadyDeclaredError(lastLexema string) {
+	fmt.Println("Semantic Error. \nLine: " + fmt.Sprint(currentLine) + " \nError: \nVariable " + lastLexema + " is already declared!")
+	os.Exit(1)
+}
+
+type SemanticStack struct {
+	stack []NodeSemanticStack
+}
+
+func (p *SemanticStack) pop() NodeSemanticStack {
+	var nps NodeSemanticStack
+	if len(p.stack) > 0 {
+		nps = p.stack[len(p.stack)-1]
+		p.stack = p.stack[:len(p.stack)-1]
+	}
+
+	return nps
+}
+
+func (p *SemanticStack) push(c string, r int) NodeSemanticStack {
+	nps := NodeSemanticStack{code: c, implementedRule: r}
+	p.stack = append(p.stack, nps)
+
+	return nps
+}
+
+type NodeSemanticStack struct {
+	code            string
+	implementedRule int
+}
+
+func (nps *NodeSemanticStack) getLowerCaseCode() string {
+	return strings.ToLower(nps.code)
 }
